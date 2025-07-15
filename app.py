@@ -1,13 +1,14 @@
 from flask import Flask, request, jsonify
 import openai
 import time
+import os
 
 app = Flask(__name__)
 
-# === CONFIGURE THESE ===
-OPENAI_API_KEY = "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"
-ASSISTANT_ID = "asst_EvYj7VGar4KpNBv2KyPVIab0"
-VECTOR_STORE_ID = "vs_68739df5ea6081919a0de82666775055"
+# === CONFIGURE FROM ENVIRONMENT VARIABLES ===
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ASSISTANT_ID = os.getenv("ASSISTANT_ID")
+VECTOR_STORE_ID = os.getenv("VECTOR_STORE_ID")
 
 openai.api_key = OPENAI_API_KEY
 

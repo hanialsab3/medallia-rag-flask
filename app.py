@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
-import openai
-import time
 import os
+import time
+import requests
 
 app = Flask(__name__)
 
@@ -9,8 +9,12 @@ app = Flask(__name__)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ASSISTANT_ID = os.getenv("ASSISTANT_ID")
 VECTOR_STORE_ID = os.getenv("VECTOR_STORE_ID")
-
-openai.api_key = OPENAI_API_KEY
+API_BASE = "https://api.openai.com/v1"
+HEADERS = {
+    "Authorization": f"Bearer {OPENAI_API_KEY}",
+    "OpenAI-Beta": "assistants=v2",
+    "Content-Type": "application/json"
+}
 
 @app.route("/ask-medallia", methods=["POST"])
 def ask_medallia():
@@ -21,50 +25,70 @@ def ask_medallia():
 
     try:
         # Step 1: Create a thread
-        thread = openai.beta.threads.create()
+        resp = requests.post(f"{API_BASE}/threads", headers=HEADERS, json={})
+        resp.raise_for_status()
+        thread_id = resp.json().get("id")
 
         # Step 2: Add user message
-        openai.beta.threads.messages.create(
-            thread_id=thread.id,
-            role="user",
-            content=question
+        msg_payload = {"role": "user", "content": question}
+        resp = requests.post(
+            f"{API_BASE}/threads/{thread_id}/messages",
+            headers=HEADERS,
+            json=msg_payload
         )
+        resp.raise_for_status()
 
-        # Step 3: Run the assistant with file_search
-        run = openai.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=ASSISTANT_ID,
-            tool_resources={
-                "file_search": {
-                    "vector_store_ids": [VECTOR_STORE_ID]
-                }
+        # Step 3: Run the assistant with file_search tool
+        run_payload = {
+            "assistant_id": ASSISTANT_ID,
+            "tool_resources": {
+                "file_search": {"vector_store_ids": [VECTOR_STORE_ID]}
             }
+        }
+        resp = requests.post(
+            f"{API_BASE}/threads/{thread_id}/runs",
+            headers=HEADERS,
+            json=run_payload
         )
+        resp.raise_for_status()
+        run_id = resp.json().get("id")
 
         # Step 4: Poll for completion
         while True:
-            status = openai.beta.threads.runs.retrieve(
-                thread_id=thread.id,
-                run_id=run.id
-            ).status
-
+            resp = requests.get(
+                f"{API_BASE}/threads/{thread_id}/runs/{run_id}",
+                headers=HEADERS
+            )
+            resp.raise_for_status()
+            status = resp.json().get("status")
             if status == "completed":
                 break
-            elif status in ["failed", "cancelled"]:
+            if status in ["failed", "cancelled"]:
                 return jsonify({"error": f"Run {status}"}), 500
-
             time.sleep(1.5)
 
         # Step 5: Retrieve messages
-        messages = openai.beta.threads.messages.list(thread_id=thread.id)
-        response_text = messages.data[0].content[0].text.value
+        resp = requests.get(
+            f"{API_BASE}/threads/{thread_id}/messages",
+            headers=HEADERS
+        )
+        resp.raise_for_status()
+        messages = resp.json().get("data", [])
+        # Assume the last message is the assistant's reply
+        if not messages:
+            return jsonify({"error": "No messages found."}), 500
+        last = messages[-1]
+        # Extract the text value
+        answer = last.get("content", [])[0].get("text", {}).get("value")
 
-        return jsonify({"answer": response_text})
+        return jsonify({"answer": answer})
 
+    except requests.HTTPError as e:
+        return jsonify({"error": e.response.text}), e.response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)

@@ -1,0 +1,49 @@
+openapi: 3.0.1
+info:
+  title: Medallia RAG Assistant
+  description: |
+    A simple wrapper around your Flask `/ask-medallia` endpoint  
+    that forwards questions to OpenAI and returns answers.
+  version: 1.0.0
+servers:
+  - url: https://medallia-rag-api.onrender.com
+paths:
+  /ask-medallia:
+    post:
+      summary: Ask a question of the Medallia RAG assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - question
+              properties:
+                question:
+                  type: string
+                  example: "How do I configure a webhook in Medallia?"
+      responses:
+        '200':
+          description: Successful response with the assistant’s answer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer:
+                    type: string
+                    description: The assistant’s reply
+                    example: "To configure a webhook in Medallia, go to Admin → Integrations..."
+        '400':
+          description: Bad request (missing question)
+        '500':
+          description: Server error
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+security:
+  - ApiKeyAuth: []

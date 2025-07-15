@@ -74,12 +74,14 @@ def ask_medallia():
         )
         resp.raise_for_status()
         messages = resp.json().get("data", [])
-        # Assume the last message is the assistant's reply
-        if not messages:
-            return jsonify({"error": "No messages found."}), 500
-        last = messages[-1]
+
+        # Filter for assistant responses
+        assistant_messages = [m for m in messages if m.get("role") == "assistant"]
+        if not assistant_messages:
+            return jsonify({"error": "No assistant response found."}), 500
+        last_assistant = assistant_messages[-1]
         # Extract the text value
-        answer = last.get("content", [])[0].get("text", {}).get("value")
+        answer = last_assistant.get("content", [])[0].get("text", {}).get("value")
 
         return jsonify({"answer": answer})
 

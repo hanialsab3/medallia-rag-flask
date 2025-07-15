@@ -5,9 +5,9 @@ import time
 app = Flask(__name__)
 
 # === CONFIGURE THESE ===
-OPENAI_API_KEY = "your-openai-api-key"
-ASSISTANT_ID = "asst-abc123"
-VECTOR_STORE_ID = "vs-xyz456"
+OPENAI_API_KEY = "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"
+ASSISTANT_ID = "asst_EvYj7VGar4KpNBv2KyPVIab0"
+VECTOR_STORE_ID = "vs_68739df5ea6081919a0de82666775055"
 
 openai.api_key = OPENAI_API_KEY
 

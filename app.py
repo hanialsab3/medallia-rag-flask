@@ -2,8 +2,11 @@ from flask import Flask, request, jsonify
 import os
 import time
 import requests
+from flask_cors import CORS
 
 app = Flask(__name__)
+
+CORS(app)
 
 # === CONFIGURE FROM ENVIRONMENT VARIABLES ===
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

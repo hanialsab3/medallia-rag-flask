@@ -1,3 +1,4 @@
 flask
 requests
 openai>=1.31.0
+Flask-Cors
